@@ -56,7 +56,7 @@ def pgd_scan(address_str):
 
     pmd_address = get_phys_address(pud_position)
     if is_huge(pmd_address):
-        huge_1gb(pmd_address,cr3_2mb_shift)
+        huge_1gb(pmd_address,cr3_1gb_shift)
         return
     pmd_cleaned = extract_address(pmd_address)
     pmd_shift = pmd_index*8
