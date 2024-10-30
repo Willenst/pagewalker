@@ -27,3 +27,7 @@ pt phys adress 0x100110af0
 page phys adress 0x315e000
 ```
 
+## Note: 
+
+It is intended that object is an actual pagetable!
+
