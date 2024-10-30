@@ -9,13 +9,13 @@ def get_virt_indices(addr):
 def extract_address(addr):
     return addr & ~((1 << 12) - 1) & ((1 << 51) - 1)
 
-def huge_1gb(addr,shift):
-    addr = addr & ~((1<<30)-1) & ((1<<51)-1)
+def huge_1gb(address,shift):
+    addr = address & ~((1<<30)-1) & ((1<<51)-1)
     addr = addr + shift
     print('1G huge page phys address', hex(addr))
 
-def huge_2mb(addr,shift):
-    addr & ~((1<<21)-1) & ((1<<51)-1)
+def huge_2mb(address,shift):
+    addr = address & ~((1<<21)-1) & ((1<<51)-1)
     addr = addr + shift
     print('2MB huge page phys address', hex(addr))
 
@@ -35,8 +35,8 @@ def pgd_scan(address_str):
     cr3_register = int(value_str,16)
     
 
-    cr3_2mb_shift = cr3_register  & ((1<<21)-1)
-    cr3_1gb_shift = cr3_register  & ((1 << 30) - 1)
+    cr3_2mb_shift = address  & ((1 << 21)-1)
+    cr3_1gb_shift = address  & ((1 << 30) - 1)
     print('use "monitor xp/gx addr" to check the value\n')
 
     print('cr3 value',hex(cr3_register))
