@@ -9,11 +9,15 @@ def get_virt_indices(addr):
 def extract_address(addr):
     return addr & ~((1 << 12) - 1) & ((1 << 51) - 1)
 
-def huge_pgd(addr):
-    print('page phys address',hex(addr & ~((1<<30)-1) & ((1<<51)-1)))
+def huge_1gb(addr,shift):
+    addr = addr & ~((1<<30)-1) & ((1<<51)-1)
+    addr = addr + shift
+    print('1G huge page phys address', hex(addr))
 
-def huge_pmd(addr):
-    print('page phys address',hex(addr & ~((1<<21)-1) & ((1<<51)-1)))
+def huge_2mb(addr,shift):
+    addr & ~((1<<21)-1) & ((1<<51)-1)
+    addr = addr + shift
+    print('2MB huge page phys address', hex(addr))
 
 def is_huge(addr):
     return addr & (1<<7)
@@ -30,6 +34,9 @@ def pgd_scan(address_str):
     value_str = output.split('=')[1].strip()
     cr3_register = int(value_str,16)
     
+
+    cr3_2mb_shift = cr3_register  & ((1<<21)-1)
+    cr3_1gb_shift = cr3_register  & ((1 << 30) - 1)
     print('use "monitor xp/gx addr" to check the value\n')
 
     print('cr3 value',hex(cr3_register))
@@ -51,7 +58,7 @@ def pgd_scan(address_str):
 
     pmd_address = get_phys_address(pud_position)
     if is_huge(pmd_address):
-        huge_pgd(pmd_address)
+        huge_1gb(pmd_address,cr3_2mb_shift)
         return
     pmd_cleaned = extract_address(pmd_address)
     pmd_shift = pmd_index*8
@@ -60,7 +67,7 @@ def pgd_scan(address_str):
 
     pt_address = get_phys_address(pmd_position)
     if is_huge(pt_address):
-        huge_pmd(pt_address)
+        huge_2mb(pt_address,cr3_2mb_shift)
         return
     pt_cleaned = extract_address(pt_address)
     pt_shift = pt_index*8
