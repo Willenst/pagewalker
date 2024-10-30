@@ -27,15 +27,13 @@ def get_phys_address(addr):
 
 def pgd_scan(address_str):
     address = int(address_str,16)
-    
     pgd_index, pud_index, pmd_index, pt_index = get_virt_indices(address)
 
     output = gdb.execute("p/x $cr3 & ~0xfff", to_string=True)
     value_str = output.split('=')[1].strip()
     cr3_register = int(value_str,16)
-    
 
-    cr3_2mb_shift = address  & ((1 << 21)-1)
+    cr3_2mb_shift = address  & ((1 << 21) - 1)
     cr3_1gb_shift = address  & ((1 << 30) - 1)
     print('use "monitor xp/gx addr" to check the value\n')
 
