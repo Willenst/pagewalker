@@ -47,7 +47,7 @@ def pgd_scan(address_str):
     pgd_position = cr3_register+pgd_shift
 
     print('\npgd phys address', hex(pgd_position))
-    
+
     pud_address = get_phys_address(pgd_position)
     pud_cleaned = extract_address(pud_address)
     pud_shift = pud_index*8
@@ -71,7 +71,7 @@ def pgd_scan(address_str):
     pt_shift = pt_index*8
     pt_position = pt_cleaned + pt_shift
     print('pt phys adress', hex(pt_position))
-    
+
     phys_address = get_phys_address(pt_position)
     phys_cleaned = extract_address(phys_address)
     phys_position = phys_cleaned & ~((1<<12)-1) & ((1<<63)-1) #clear service bit and align to page
