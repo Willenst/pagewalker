@@ -14,7 +14,7 @@ example:
 1st address is the address of the beginning of the search area
 2nd end address of the end of the search area
 3rd step
-4th desired physical address
+4th desired physical address 
 
 ```
 (remote) gef➤  pgd_scan 0xffffffff8315e000
