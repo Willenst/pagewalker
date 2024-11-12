@@ -1,80 +1,99 @@
 import gdb
 
-def get_virt_indexes(addr):
-    pageshift = 12
-    addr = addr >> pageshift
-    pt, pmd, pud, pgd = (((addr >> (i * 9)) & 0x1FF) for i in range(4))
-    return pgd, pud, pmd, pt
+class Page:
+    cr3_register = None
 
-def extract_address(addr):
-    return addr & ~((1 << 12) - 1) & ((1 << 51) - 1)
+    def __init__(self, virtual_address):
+        self.virtual = virtual_address
+        self.indexes = None
+        self.pgd = None
+        self.pud = None
+        self.pmd = None
+        self.pt = None
+        self.huge = ''
+        self.phys = None
+        Page.cr3_register = Page.set_cr3()
+        Page.pgd_scan(self, virtual_address)
 
-def huge_1gb(address,shift):
-    addr = address & ~((1<<30)-1) & ((1<<51)-1)
-    addr = addr + shift
-    print('1G huge page phys address', hex(addr))
+    @staticmethod
+    def is_huge(addr):
+        return addr & (1 << 7)
 
-def huge_2mb(address,shift):
-    addr = address & ~((1<<21)-1) & ((1<<51)-1)
-    addr = addr + shift
-    print('2MB huge page phys address', hex(addr))
+    @staticmethod
+    def get_indexes(addr):
+        addr = addr >> 12
+        return [((addr >> (i * 9)) & 0x1FF) * 8 for i in range(4)][::-1]
 
-def is_huge(addr):
-    return addr & (1<<7)
+    @staticmethod
+    def huge_1gb(address):
+        addr = address & ~((1 << 30) - 1) & ((1 << 51) - 1)
+        addr = addr + address & ((1 << 30) - 1)
+        return addr
 
-def get_phys_address(addr):
-    return int(gdb.execute(f"monitor xp/gx {addr}", to_string=True).split(':')[1].strip(),16)
+    @staticmethod
+    def huge_2mb(address):
+        addr = address & ~((1 << 21) - 1) & ((1 << 51) - 1)
+        addr = addr + address & ((1 << 21) - 1)
+        return addr
+
+    def get_phys_address(self, address):
+        phys_addr = int(gdb.execute(f"monitor xp/gx {address}", to_string=True).split(':')[1].strip(), 16)
+        if Page.is_huge(phys_addr):
+            self.huge = 'HUGE'
+            return phys_addr
+        cleaned_addr = phys_addr & ~((1 << 12) - 1) & ((1 << 51) - 1)
+        return cleaned_addr
+
+    @staticmethod
+    def set_cr3():
+        output = gdb.execute("p/x $cr3 & ~0xfff", to_string=True)
+        value_str = output.split('=')[1].strip()
+        return int(value_str, 16)
+
+    def pgd_scan(self, addr):
+        address = int(addr,16)
+        self.indexes = Page.get_indexes(address)
+        pgd_start = Page.cr3_register
+        self.pgd = pgd_start + self.indexes[0]
+
+        pud_start = Page.get_phys_address(self, self.pgd)
+        self.pud = pud_start + self.indexes[1]
+
+        pmd_start = Page.get_phys_address(self, self.pud)
+        if self.huge:
+            self.phys = Page.huge_1gb(pmd_start)
+            return
+        self.pmd = pmd_start + self.indexes[2]
+
+        pt_start = Page.get_phys_address(self, self.pmd)
+        if self.huge:
+            self.phys = Page.huge_2mb(pt_start)
+            return
+        self.pt = pt_start + self.indexes[3]
+
+        phys_start = Page.get_phys_address(self, self.pt)
+        self.phys = phys_start & ~((1 << 12) - 1) & ((1 << 63) - 1)
 
 def pgd_scan(address_str):
-    address = int(address_str,16)
-    pgd_index, pud_index, pmd_index, pt_index = get_virt_indexes(address)
+    page = Page(address_str)
 
-    output = gdb.execute("p/x $cr3 & ~0xfff", to_string=True)
-    value_str = output.split('=')[1].strip()
-    cr3_register = int(value_str,16)
+    #printing part
+    print()
+    print(f"{page.virtual:<20}|{'PGD':<15}|{'PUD':<15}|{'PMD':<15}|{'PT':<15}|{'PHYS':<15}")
+    print('-'*(15*5+20))
+    print(f"{'index:':<20}|{page.indexes[0]//8:<15}|{page.indexes[1]//8:<15}|{page.indexes[2]//8:<15}|{page.indexes[3]//8:<15}|{page.huge:<15}")
+    print('-'*(15*5+20))
+    print(f"{'address:':<20}|{hex(page.pgd):<15}|{hex(page.pud):<15}|{hex(page.pmd):<15}|{hex(page.pt):<15}|{hex(page.phys):<15}")
+    print()
 
-    cr3_2mb_shift = address  & ((1 << 21) - 1)
-    cr3_1gb_shift = address  & ((1 << 30) - 1)
-    print('use "monitor xp/gx addr" to check the value\n')
-
-    print('cr3 value',hex(cr3_register))
-    print('pgd_index',pgd_index)
-    print('pud_index',pud_index)
-    print('pmd_index',pmd_index)
-    print('pt_index',pt_index)
-
-    pgd_shift = pgd_index*8
-    pgd_position = cr3_register+pgd_shift
-
-    print('\npgd phys address', hex(pgd_position))
-
-    pud_address = get_phys_address(pgd_position)
-    pud_cleaned = extract_address(pud_address)
-    pud_shift = pud_index*8
-    pud_position = pud_cleaned + pud_shift
-    print('pud phys address', hex(pud_position))
-
-    pmd_address = get_phys_address(pud_position)
-    if is_huge(pmd_address):
-        huge_1gb(pmd_address,cr3_1gb_shift)
-        return
-    pmd_cleaned = extract_address(pmd_address)
-    pmd_shift = pmd_index*8
-    pmd_position = pmd_cleaned + pmd_shift
-    print('pmd phys address', hex(pmd_position))
-
-    pt_address = get_phys_address(pmd_position)
-    if is_huge(pt_address):
-        huge_2mb(pt_address,cr3_2mb_shift)
-        return
-    pt_cleaned = extract_address(pt_address)
-    pt_shift = pt_index*8
-    pt_position = pt_cleaned + pt_shift
-    print('pt phys adress', hex(pt_position))
-
-    phys_address = get_phys_address(pt_position)
-    phys_cleaned = extract_address(phys_address)
-    phys_position = phys_cleaned & ~((1<<12)-1) & ((1<<63)-1) #clear service bit and align to page
-    print('page phys adress', hex(phys_position))
+def pgd_phys_search(range_start, range_end, range_step, phys_address):
+    start = int(range_start,16)
+    end = int(range_end,16)
+    step = int(range_step,16)
+    for i in range(start,end,step):
+        page=Page(hex(i))
+        if phys_address == hex(page.phys):
+            print(hex(i))
 
 gdb.execute('define pgd_scan\npython pgd_scan("$arg0")\nend')
+gdb.execute('define pgd_phys_search\npython pgd_phys_search("$arg0", "$arg1", "$arg2", "$arg3")\nend')
