@@ -74,7 +74,7 @@ class Page:
         phys_start = Page.get_phys_address(self, self.pt)
         self.phys = phys_start & ~((1 << 12) - 1) & ((1 << 63) - 1)
 
-def main(address_str):
+def pgd_scan(address_str):
     page = Page(address_str)
 
     #printing part
@@ -86,5 +86,14 @@ def main(address_str):
     print(f"{'address:':<20}|{hex(page.pgd):<15}|{hex(page.pud):<15}|{hex(page.pmd):<15}|{hex(page.pt):<15}|{hex(page.phys):<15}")
     print()
 
+def pgd_phys_search(range_start, range_end, range_step, phys_address):
+    start = int(range_start,16)
+    end = int(range_end,16)
+    step = int(range_step,16)
+    for i in range(start,end,step):
+        page=Page(hex(i))
+        if phys_address == hex(page.phys):
+            print(hex(i))
 
-gdb.execute('define pgd_scan\npython main("$arg0")\nend')
+gdb.execute('define pgd_scan\npython pgd_scan("$arg0")\nend')
+gdb.execute('define pgd_phys_search\npython pgd_phys_search("$arg0", "$arg1", "$arg2", "$arg3")\nend')
