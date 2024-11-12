@@ -2,9 +2,9 @@
 
 A simple, semi-automated GDB module to print essential information about 4-level page tables.
 
-## Usage:
+# Usage:
 
-### Analyze Page:
+## Analyze Page:
 
 1. Import the tool in gdb runtime: `source {your_path_to_tool}/pagewalker.py` (or simply add to .gdbinit)
 2. In GDB, call: `pgd_scan {virtual_address}`
@@ -21,7 +21,7 @@ index:              |508            |0              |0              |0          
 address:            |0x100fc0fe0    |0x23fff0000    |0x23ffef000    |0x23ffed000    |0x315d000 
 ```
 
-# Search virtual address for a physical page:
+## Search virtual address for a physical page:
 
 ```
 (remote) gef➤  pgd_phys_search 0xfffffe0000000000 0xfffffe0000004000 0x1000 0x237c14000
