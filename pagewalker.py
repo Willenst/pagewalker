@@ -1,6 +1,6 @@
 import gdb
 
-def get_virt_indices(addr):
+def get_virt_indexes(addr):
     pageshift = 12
     addr = addr >> pageshift
     pt, pmd, pud, pgd = (((addr >> (i * 9)) & 0x1FF) for i in range(4))
@@ -27,7 +27,7 @@ def get_phys_address(addr):
 
 def pgd_scan(address_str):
     address = int(address_str,16)
-    pgd_index, pud_index, pmd_index, pt_index = get_virt_indices(address)
+    pgd_index, pud_index, pmd_index, pt_index = get_virt_indexes(address)
 
     output = gdb.execute("p/x $cr3 & ~0xfff", to_string=True)
     value_str = output.split('=')[1].strip()
