@@ -12,19 +12,11 @@ example:
 ```
 (remote) gef➤  pgd_scan 0xffffffff8315e000
 
-use "monitor xp/gx addr" to check the value
-
-cr3 value 0x11005a000
-pgd_index 511
-pud_index 510
-pmd_index 24
-pt_index 350
-
-pgd phys address 0x11005aff8
-pud phys address 0x280fff0
-pmd phys address 0x28100c0
-pt phys adress 0x100110af0
-page phys adress 0x315e000
+0xfffffe0000000000  |PGD            |PUD            |PMD            |PT             |PHYS           
+-----------------------------------------------------------------------------------------------
+index:              |508            |0              |0              |0              |               
+-----------------------------------------------------------------------------------------------
+address:            |0x100fc0fe0    |0x23fff0000    |0x23ffef000    |0x23ffed000    |0x315d000 
 ```
 
 ## Note: 
