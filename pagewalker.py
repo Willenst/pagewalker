@@ -37,7 +37,10 @@ class Page:
         return addr
 
     def get_phys_address(self, address):
-        phys_addr = int(gdb.execute(f"monitor xp/gx {address}", to_string=True).split(':')[1].strip(), 16)
+        result = gdb.execute(f"monitor xp/gx {address}", to_string=True)
+        if 'Cannot access memory' in result:
+            return None
+        phys_addr = int(result.split(':')[1].strip(), 16)
         if Page.is_huge(phys_addr):
             self.huge = 'HUGE'
             return phys_addr
@@ -56,6 +59,8 @@ class Page:
         self.pgd = pgd_start + self.indexes[0]
 
         pud_start = Page.get_phys_address(self, self.pgd)
+        if pud_start is None:
+            return
         self.pud = pud_start + self.indexes[1]
 
         pmd_start = Page.get_phys_address(self, self.pud)
@@ -88,7 +93,7 @@ def pgd_scan(address_str):
 
     #printing part
     print()
-    print(f"{page.virtual:<20}|{'PGD':<15}|{'PUD':<15}|{'PMD':<15}|{'PT':<15}|{'PHYS':<15}")
+    print(f"{hex(page.virtual):<20}|{'PGD':<15}|{'PUD':<15}|{'PMD':<15}|{'PT':<15}|{'PHYS':<15}")
     print('-'*(15*5+20))
     print(f"{'index:':<20}|{page.indexes[0]//8:<15}|{page.indexes[1]//8:<15}|{page.indexes[2]//8:<15}|{page.indexes[3]//8:<15}|{page.huge:<15}")
     print('-'*(15*5+20))
@@ -100,10 +105,11 @@ def pgd_phys_search(range_start, range_end, range_step, phys_address):
     start = int(range_start,16)
     end = int(range_end,16)
     step = int(range_step,16)
-    for i in range(start,end,step):
-        page=Page(hex(i))
-        if phys_address == hex(page.phys):
-            print(hex(i))
+    for i in range(start, end, step):
+        page = Page(hex(i))
+        if page.phys is not None:
+            if phys_address == hex(page.phys):
+                print(hex(i))
 
 gdb.execute('define pgd_scan\npython pgd_scan("$arg0")\nend')
 gdb.execute('define pgd_phys_search\npython pgd_phys_search("$arg0", "$arg1", "$arg2", "$arg3")\nend')
