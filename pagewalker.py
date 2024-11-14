@@ -27,13 +27,13 @@ class Page:
 
     def huge_1gb(self, address):
         addr = address & ~((1 << 30) - 1) & ((1 << 51) - 1)
-        addr = addr + self.virtual & ((1 << 30) - 1)
+        addr = addr + (self.virtual & ((1 << 30) - 1))
         return addr
 
 
     def huge_2mb(self, address):
         addr = address & ~((1 << 21) - 1) & ((1 << 51) - 1)
-        addr = addr + self.virtual & ((1 << 21) - 1)
+        addr = addr + (self.virtual & ((1 << 30) - 1))
         return addr
 
     def get_phys_address(self, address):
