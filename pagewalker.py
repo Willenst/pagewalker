@@ -12,6 +12,7 @@ class Page:
         self.pt = None
         self.huge = ''
         self.phys = None
+        self.broken = False
         Page.cr3_register = Page.set_cr3()
         Page.pgd_scan(self, virtual_address)
 
@@ -24,16 +25,14 @@ class Page:
         addr = addr >> 12
         return [((addr >> (i * 9)) & 0x1FF) * 8 for i in range(4)][::-1]
 
-
     def huge_1gb(self, address):
         addr = address & ~((1 << 30) - 1) & ((1 << 51) - 1)
-        addr = addr + (self.virtual & ((1 << 30) - 1))
+        addr += self.virtual & ((1 << 30) - 1)
         return addr
-
 
     def huge_2mb(self, address):
         addr = address & ~((1 << 21) - 1) & ((1 << 51) - 1)
-        addr = addr + (self.virtual & ((1 << 30) - 1))
+        addr += self.virtual & ((1 << 21) - 1)
         return addr
 
     def get_phys_address(self, address):
@@ -44,8 +43,7 @@ class Page:
         if Page.is_huge(phys_addr):
             self.huge = 'HUGE'
             return phys_addr
-        cleaned_addr = phys_addr & ~((1 << 12) - 1) & ((1 << 51) - 1)
-        return cleaned_addr
+        return phys_addr & ~((1 << 12) - 1) & ((1 << 51) - 1)
 
     @staticmethod
     def set_cr3():
@@ -60,23 +58,33 @@ class Page:
 
         pud_start = Page.get_phys_address(self, self.pgd)
         if pud_start is None:
+            self.broken = True
             return
         self.pud = pud_start + self.indexes[1]
 
         pmd_start = Page.get_phys_address(self, self.pud)
+        if pmd_start is None:
+            self.broken = True
+            return
         if self.huge:
             self.phys = Page.huge_1gb(self, pmd_start)
             return
         self.pmd = pmd_start + self.indexes[2]
 
         pt_start = Page.get_phys_address(self, self.pmd)
+        if pt_start is None:
+            self.broken = True
+            return
         if self.huge:
             self.phys = Page.huge_2mb(self, pt_start)
             return
         self.pt = pt_start + self.indexes[3]
 
         phys_start = Page.get_phys_address(self, self.pt)
-        self.phys = phys_start & ~((1 << 12) - 1) & ((1 << 63) - 1)
+        if phys_start is not None:
+            self.phys = phys_start & ~((1 << 12) - 1) & ((1 << 63) - 1)
+        else:
+            self.broken = True
 
 def format_output(addr1, addr2, addr3 ,addr4, addr5):
     address_list = [addr1, addr2, addr3 ,addr4, addr5]
@@ -107,6 +115,11 @@ def pgd_phys_search(range_start, range_end, range_step, phys_address):
     step = int(range_step,16)
     for i in range(start, end, step):
         page = Page(hex(i))
+        if page.broken == True:
+            print()
+            print('reached unreadable address:')
+            print(hex(page.virtual))
+            break
         if page.phys is not None:
             if phys_address == hex(page.phys):
                 print(hex(i))
