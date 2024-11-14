@@ -11,11 +11,6 @@ A simple, semi-automated GDB module to print essential information about 4-level
 
 example:
 
-1st address - is the address of the beginning of the search area
-2nd address - end address of the end of the search area
-3rd address - step
-4th address - desired physical address 
-
 ```
 (remote) gef➤  pgd_scan 0xffffffff8315e000
 
@@ -28,10 +23,10 @@ address:            |0x100fc0fe0    |0x23fff0000    |0x23ffef000    |0x23ffed000
 
 ## Search virtual address for a physical page:
 
-1st address - is the address of the beginning of the search area
-2nd address - end address of the end of the search area
-3rd address - step
-4th address - desired physical address 
+1st address - is the address of the beginning of the search area;
+2nd address - end address of the end of the search area;
+3rd address - step;
+4th address - desired physical address;
 
 ```
 (remote) gef➤  pgd_phys_search 0xfffffe0000000000 0xfffffe0000004000 0x1000 0x237c14000
