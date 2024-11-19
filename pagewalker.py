@@ -99,6 +99,12 @@ def format_output(addr1, addr2, addr3 ,addr4, addr5):
 def pgd_scan(address_str):
     page = Page(address_str)
 
+    try:
+        hex(page.phys)
+    except:
+        print(f"{hex(page.virtual):<20} address don't exist")
+        return
+
     #printing part
     print()
     print(f"{hex(page.virtual):<20}|{'PGD':<15}|{'PUD':<15}|{'PMD':<15}|{'PT':<15}|{'PHYS':<15}")
