@@ -124,5 +124,13 @@ def pgd_phys_search(range_start, range_end, range_step, phys_address):
             if phys_address == hex(page.phys):
                 print(hex(i))
 
+def pgd_range_scan(range_start, range_end, range_step):
+    start = int(range_start,16)
+    end = int(range_end,16)
+    step = int(range_step,16)
+    for i in range(start, end, step):
+        pgd_scan(hex(i))
+
 gdb.execute('define pgd_scan\npython pgd_scan("$arg0")\nend')
+gdb.execute('define pgd_range_scan\npython pgd_range_scan("$arg0", "$arg1", "$arg2")\nend')
 gdb.execute('define pgd_phys_search\npython pgd_phys_search("$arg0", "$arg1", "$arg2", "$arg3")\nend')
