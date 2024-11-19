@@ -1,6 +1,6 @@
 # pagewalker
 
-A simple, semi-automated GDB module to print essential information about 4-level page tables.
+A simple, semi-automated GDB module/plugin for 4-level page tables analyze.
 
 # Usage:
 
