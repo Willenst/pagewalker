@@ -49,15 +49,16 @@ index:              |2              |0              |1              |0          
 address:            |0x101fb2010    |0x14d1ef000    |0x14d1f0008    |0x14d253000    |0x15175f000
 ```
 
-## Search virtual address for a physical page:
+## Search virtual address for a physical page or pagetable entry:
 
-1st address - is the address of the beginning of the search area
-2nd address - end address of the end of the search area
-3rd address - step
-4th address - desired physical address 
+1st param - is the address of the beginning of the search area
+2nd param - end address of the end of the search area
+3rd param - step
+4th param - desired physical address 
+5th param - type of entry (phys, pt ,pmd, pgd, pud)
 
 ```
-(remote) gef➤  pgd_phys_search 0xfffffe0000000000 0xfffffe0000004000 0x1000 0x237c14000
+(remote) gef➤  pgd_phys_search 0xfffffe0000000000 0xfffffe0000004000 0x1000 0x237c14000 phys
 0xfffffe0000002000
 ```
 
