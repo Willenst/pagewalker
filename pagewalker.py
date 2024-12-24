@@ -34,6 +34,11 @@ class Page:
         addr = address & ~((1 << 21) - 1) & ((1 << 51) - 1)
         addr += self.virtual & ((1 << 21) - 1)
         return addr
+    
+    def page_4kb(self, address):
+        addr = address & ~((1 << 12) - 1) & ((1 << 51) - 1)
+        addr += self.virtual & ((1 << 12) - 1)
+        return addr
 
     def get_phys_address(self, address):
         result = gdb.execute(f"monitor xp/gx {address}", to_string=True)
@@ -82,7 +87,8 @@ class Page:
 
         phys_start = Page.get_phys_address(self, self.pt)
         if phys_start is not None:
-            self.phys = phys_start & ~((1 << 12) - 1) & ((1 << 63) - 1)
+            self.phys = Page.page_4kb(self, phys_start)
+            return
         else:
             self.broken = True
 
