@@ -34,6 +34,11 @@ class Page:
         addr = address & ~((1 << 21) - 1) & ((1 << 51) - 1)
         addr += self.virtual & ((1 << 21) - 1)
         return addr
+    
+    def page_4kb(self, address):
+        addr = address & ~((1 << 12) - 1) & ((1 << 51) - 1)
+        addr += self.virtual & ((1 << 12) - 1)
+        return addr
 
     def get_phys_address(self, address):
         result = gdb.execute(f"monitor xp/gx {address}", to_string=True)
@@ -82,7 +87,8 @@ class Page:
 
         phys_start = Page.get_phys_address(self, self.pt)
         if phys_start is not None:
-            self.phys = phys_start & ~((1 << 12) - 1) & ((1 << 63) - 1)
+            self.phys = Page.page_4kb(self, phys_start)
+            return
         else:
             self.broken = True
 
@@ -99,6 +105,12 @@ def format_output(addr1, addr2, addr3 ,addr4, addr5):
 def pgd_scan(address_str):
     page = Page(address_str)
 
+    try:
+        hex(page.phys)
+    except:
+        print(f"{hex(page.virtual):<20} address don't exist")
+        return
+
     #printing part
     print()
     print(f"{hex(page.virtual):<20}|{'PGD':<15}|{'PUD':<15}|{'PMD':<15}|{'PT':<15}|{'PHYS':<15}")
@@ -109,20 +121,39 @@ def pgd_scan(address_str):
     print(f"{'address:':<20}|{addresses[0]:<15}|{addresses[1]:<15}|{addresses[2]:<15}|{addresses[3]:<15}|{addresses[4]:<15}")
     print()
 
-def pgd_phys_search(range_start, range_end, range_step, phys_address):
+def pgd_phys_search(range_start, range_end, range_step, phys_address, table_type):
+    start = int(range_start,16)
+    end = int(range_end,16)
+    step = int(range_step,16)
+    fail_counter = 0
+    for i in range(start, end, step):
+        page = Page(hex(i))
+        field = {
+            'phys': 'phys',
+            'pt': 'pt',
+            'pmd': 'pmd',
+            'pgd': 'pgd',
+            'pud': 'pud'
+        }.get(table_type)
+        if page.broken == True:
+            fail_counter += 1
+            print('reached unreadable address:',hex(page.virtual))
+            if fail_counter == 20:
+                print('too many fails, stopping')
+                break
+            continue
+        fail_counter = 0
+        if getattr(page, field) is not None:
+            if phys_address == hex(getattr(page, field)):
+                print(f"\033[32m{hex(i)}\033[0m")
+
+def pgd_range_scan(range_start, range_end, range_step):
     start = int(range_start,16)
     end = int(range_end,16)
     step = int(range_step,16)
     for i in range(start, end, step):
-        page = Page(hex(i))
-        if page.broken == True:
-            print()
-            print('reached unreadable address:')
-            print(hex(page.virtual))
-            break
-        if page.phys is not None:
-            if phys_address == hex(page.phys):
-                print(hex(i))
+        pgd_scan(hex(i))
 
 gdb.execute('define pgd_scan\npython pgd_scan("$arg0")\nend')
-gdb.execute('define pgd_phys_search\npython pgd_phys_search("$arg0", "$arg1", "$arg2", "$arg3")\nend')
+gdb.execute('define pgd_range_scan\npython pgd_range_scan("$arg0", "$arg1", "$arg2")\nend')
+gdb.execute('define pgd_phys_search\npython pgd_phys_search("$arg0", "$arg1", "$arg2", "$arg3", "$arg4")\nend')

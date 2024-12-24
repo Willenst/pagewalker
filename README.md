@@ -1,15 +1,13 @@
 # pagewalker
 
-A simple, semi-automated GDB module to print essential information about 4-level page tables.
+A simple, semi-automated GDB module/plugin for 4-level page tables analyze.
 
-# Usage:
+## Usage
 
-## Analyze Page:
+### Page walk
 
 1. Import the tool in gdb runtime: `source {your_path_to_tool}/pagewalker.py` (or simply add to .gdbinit)
 2. In GDB, call: `pgd_scan {virtual_address}`
-
-example:
 
 ```
 (remote) gef➤  pgd_scan 0xffffffff8315e000
@@ -21,15 +19,41 @@ index:              |508            |0              |0              |0          
 address:            |0x100fc0fe0    |0x23fff0000    |0x23ffef000    |0x23ffed000    |0x315d000 
 ```
 
-## Search virtual address for a physical page:
+### Page walk for range of pages
 
-1st address - is the address of the beginning of the search area;
-2nd address - end address of the end of the search area;
-3rd address - step;
-4th address - desired physical address;
+1st address - is the address of the beginning of the range
+2nd address - end address of the end of the range
+3rd address - step
 
 ```
-(remote) gef➤  pgd_phys_search 0xfffffe0000000000 0xfffffe0000004000 0x1000 0x237c14000
+pgd_range_scan 0x10000000000 0x10062000000 0x200000
+
+0x10000000000       |PGD            |PUD            |PMD            |PT             |PHYS           
+-----------------------------------------------------------------------------------------------
+index:              |2              |0              |0              |0              |               
+-----------------------------------------------------------------------------------------------
+address:            |0x101fb2010    |0x14d1ef000    |0x14d1f0000    |0x14d1f1000    |0x14aa4f000    
+
+
+0x10000200000       |PGD            |PUD            |PMD            |PT             |PHYS           
+-----------------------------------------------------------------------------------------------
+index:              |2              |0              |1              |0              |               
+-----------------------------------------------------------------------------------------------
+address:            |0x101fb2010    |0x14d1ef000    |0x14d1f0008    |0x14d253000    |0x15175f000
+```
+
+### Search virtual address for a physical page or page table entry
+
+`(Currently slow and unstable)`
+
+1st param - address of the beginning of the search area
+2nd param - address of the end of the search area
+3rd param - step
+4th param - desired physical address 
+5th param - type of entry (phys, pt , pmd, pud, pgd)
+
+```
+(remote) gef➤  pgd_phys_search 0xfffffe0000000000 0xfffffe0000004000 0x1000 0x237c14000 phys
 0xfffffe0000002000
 ```
 
