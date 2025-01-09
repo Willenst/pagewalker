@@ -45,12 +45,13 @@ address:            |0x101fb2010    |0x14d1ef000    |0x14d1f0008    |0x14d253000
 ### Search virtual address for a physical page or page table entry
 
 `(Currently slow and unstable)`
+`Can be used to search for any address entry in memory`
 
 1st param - address of the beginning of the search area
 2nd param - address of the end of the search area
 3rd param - step
 4th param - desired physical address 
-5th param - type of entry (phys, pt , pmd, pud, pgd)
+5th param - type of entry (phys, pt , pmd, pud, pgd), use all if you need to search address in any entry.
 
 ```
 (remote) gef➤  pgd_phys_search 0xfffffe0000000000 0xfffffe0000004000 0x1000 0x237c14000 phys
@@ -59,7 +60,7 @@ address:            |0x101fb2010    |0x14d1ef000    |0x14d1f0008    |0x14d253000
 
 ## Note: 
 
-It is intended that object is an actual address! Tool will be reworked to be more reliable and work with arguments soon!
+It is intended that object is an actual address! Keep in mind, the tool may give errors now, especially if you use it in a way inconsistent with the README, as there are no safeguards against misuse! May not work for some addresses!
 
 ## To be done:
 
