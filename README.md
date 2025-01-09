@@ -60,3 +60,10 @@ address:            |0x101fb2010    |0x14d1ef000    |0x14d1f0008    |0x14d253000
 ## Note: 
 
 It is intended that object is an actual address! Tool will be reworked to be more reliable and work with arguments soon!
+
+## To be done:
+
+1. Completely redesign the work with plugin arguments, which would be convenient and understandable
+2. Build help message
+3. Make more functionality to analyze exploits like PTE spray and search for page table collisions.
+4. Add an option and fucntion to display access rights and page table flags layout
