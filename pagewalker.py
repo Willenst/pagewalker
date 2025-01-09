@@ -14,7 +14,7 @@ class Page:
         self.phys = None
         self.broken = False
         Page.cr3_register = Page.set_cr3()
-        Page.pgd_scan(self, virtual_address)
+        Page.pgd_walk(self, virtual_address)
 
     @staticmethod
     def is_huge(addr):
@@ -56,7 +56,7 @@ class Page:
         value_str = output.split('=')[1].strip()
         return int(value_str, 16)
 
-    def pgd_scan(self, addr):
+    def pgd_walk(self, addr):
         self.indexes = Page.get_indexes(self.virtual)
         pgd_start = Page.cr3_register
         self.pgd = pgd_start + self.indexes[0]
@@ -102,7 +102,7 @@ def format_output(addr1, addr2, addr3 ,addr4, addr5):
             return_list.append('N/A')
     return return_list
 
-def pgd_scan(address_str):
+def pgd_walk(address_str):
     page = Page(address_str)
 
     try:
@@ -121,7 +121,7 @@ def pgd_scan(address_str):
     print(f"{'address:':<20}|{addresses[0]:<15}|{addresses[1]:<15}|{addresses[2]:<15}|{addresses[3]:<15}|{addresses[4]:<15}")
     print()
 
-def pgd_phys_search(range_start, range_end, range_step, phys_address, table_type):
+def pgd_virt_search(range_start, range_end, range_step, phys_address, table_type):
     start = int(range_start,16)
     end = int(range_end,16)
     step = int(range_step,16)
@@ -147,13 +147,13 @@ def pgd_phys_search(range_start, range_end, range_step, phys_address, table_type
             if phys_address == hex(getattr(page, field)):
                 print(f"\033[32m{hex(i)}\033[0m")
 
-def pgd_range_scan(range_start, range_end, range_step):
+def pgd_range_walk(range_start, range_end, range_step):
     start = int(range_start,16)
     end = int(range_end,16)
     step = int(range_step,16)
     for i in range(start, end, step):
-        pgd_scan(hex(i))
+        pgd_walk(hex(i))
 
-gdb.execute('define pgd_scan\npython pgd_scan("$arg0")\nend')
-gdb.execute('define pgd_range_scan\npython pgd_range_scan("$arg0", "$arg1", "$arg2")\nend')
-gdb.execute('define pgd_phys_search\npython pgd_phys_search("$arg0", "$arg1", "$arg2", "$arg3", "$arg4")\nend')
+gdb.execute('define pgd_walk\npython pgd_walk("$arg0")\nend')
+gdb.execute('define pgd_range_walk\npython pgd_range_walk("$arg0", "$arg1", "$arg2")\nend')
+gdb.execute('define pgd_virt_search\npython pgd_virt_search("$arg0", "$arg1", "$arg2", "$arg3", "$arg4")\nend')
