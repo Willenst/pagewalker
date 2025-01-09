@@ -126,15 +126,9 @@ def pgd_virt_search(range_start, range_end, range_step, phys_address, table_type
     end = int(range_end,16)
     step = int(range_step,16)
     fail_counter = 0
+    all_fields = ['phys', 'pt', 'pmd', 'pgd', 'pud']
     for i in range(start, end, step):
         page = Page(hex(i))
-        field = {
-            'phys': 'phys',
-            'pt': 'pt',
-            'pmd': 'pmd',
-            'pgd': 'pgd',
-            'pud': 'pud'
-        }.get(table_type)
         if page.broken == True:
             fail_counter += 1
             print('reached unreadable address:',hex(page.virtual))
@@ -143,9 +137,14 @@ def pgd_virt_search(range_start, range_end, range_step, phys_address, table_type
                 break
             continue
         fail_counter = 0
-        if getattr(page, field) is not None:
-            if phys_address == hex(getattr(page, field)):
-                print(f"\033[32m{hex(i)}\033[0m")
+        if table_type == 'any':
+            for field in all_fields:
+                if getattr(page, field) is not None:
+                    if phys_address == hex(getattr(page, field)):
+                        print(f"\033[32m{hex(i)}\033[0m in \033[32m{field}\033[0m")
+        elif phys_address == hex(getattr(page, table_type)):
+            print(f"\033[32m{hex(i)}\033[0m")
+
 
 def pgd_range_walk(range_start, range_end, range_step):
     start = int(range_start,16)
