@@ -7,6 +7,7 @@ dirname = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(1, dirname)
 
 from pagetable_entry import PGDe, PUDe, PMDe, PTe
+from spiner import spinning_cursor
 
 class Page:
     cr3_register = None
@@ -135,17 +136,24 @@ def pgd_virt_search(range_start, range_end, range_step, phys_address, table_type
     end = int(range_end,16)
     step = int(range_step,16)
     fail_counter = 0
+    cursor_progress = 0
     all_fields = ['phys', 'pt', 'pmd', 'pgd', 'pud']
+    alert = False
+    print('Searching')
     for i in range(start, end, step):
         page = Page(hex(i))
+        cursor_progress = (cursor_progress + 1) % 10000
+        spinning_cursor(cursor_progress//1000)
         if page.broken == True:
             fail_counter += 1
-            print('reached unreadable address:',hex(page.virtual))
-            if fail_counter == 20:
-                print('too many fails, stopping')
-                break
+            if fail_counter == 500 and alert == False:
+                alert = True
+                print('Unreadable area, press ctrl+C if you want to stop searching')
             continue
         fail_counter = 0
+        if alert == True:
+            alert = False
+            print('Unreadable area is over, continue scanning')
         if table_type == 'any':
             for field in all_fields:
                 if getattr(page, field) is not None:
