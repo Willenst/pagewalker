@@ -1,4 +1,12 @@
 import gdb
+import sys
+import os
+
+#hack to import other modules
+dirname = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(1, dirname)
+
+from pagetable_entry import PGDe, PUDe, PMDe, PTe
 
 class Page:
     cr3_register = None
@@ -56,6 +64,7 @@ class Page:
         value_str = output.split('=')[1].strip()
         return int(value_str, 16)
 
+#should be integrated with pagetable_entry.py
     def pgd_walk(self, addr):
         self.indexes = Page.get_indexes(self.virtual)
         pgd_start = Page.cr3_register
@@ -153,6 +162,39 @@ def pgd_range_walk(range_start, range_end, range_step):
     for i in range(start, end, step):
         pgd_walk(hex(i))
 
+def display_flags(entries):
+    print(f"{'Flag/Pagetable Entry':<30} |{'PGD':<15} |{'PUD':<15} |{'PMD':<15} |{'PT':<15}")
+    print("-" * 100)
+    flags = ['Hex','Present', 'Huge', 'ReadWrite', 'UserSupervisor', 'PageWriteThrough', 'PageCacheDisabled', 'Accessed']
+    
+    for flag in flags:
+        row = f"{flag:<30} |"
+        for entry in entries:
+            value = getattr(entry, flag, '-')
+            if isinstance(value, int):
+                value = f"0x{value:X}" if flag == 'Hex' else str(value)
+            row += f"{value:<15} |"
+        print(row)
+        print("-" * 100)
+
+    
+def page_scan(addr):
+    page = Page(addr)
+    entries = [
+        PGDe(page.pgd) if page.pgd else None,
+        PUDe(page.pud) if page.pud else None,
+        PMDe(page.pmd) if page.pmd else None,
+        PTe(page.pt) if page.pt else None
+    ]
+    entries = [entry for entry in entries if entry]
+
+    if entries:
+        display_flags(entries)
+    else:
+        print("No valid entries to display flags.")
+
+
 gdb.execute('define pgd_walk\npython pgd_walk("$arg0")\nend')
+gdb.execute('define page_scan\npython page_scan("$arg0")\nend')
 gdb.execute('define pgd_range_walk\npython pgd_range_walk("$arg0", "$arg1", "$arg2")\nend')
 gdb.execute('define pgd_virt_search\npython pgd_virt_search("$arg0", "$arg1", "$arg2", "$arg3", "$arg4")\nend')
