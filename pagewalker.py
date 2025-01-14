@@ -9,6 +9,7 @@ sys.path.insert(1, dirname)
 from pagetable_entry import PGDe, PUDe, PMDe, PTe
 from spiner import spinning_cursor
 
+#should be integrated with pagetable_entry.py
 class Page:
     cr3_register = None
 
@@ -121,7 +122,6 @@ def pgd_walk(address_str):
         print(f"{hex(page.virtual):<20} address don't exist")
         return
 
-    #printing part
     print()
     print(f"{hex(page.virtual):<20}|{'PGD':<15}|{'PUD':<15}|{'PMD':<15}|{'PT':<15}|{'PHYS':<15}")
     print('-'*(15*5+20))
@@ -132,6 +132,9 @@ def pgd_walk(address_str):
     print()
 
 def pgd_virt_search(range_start, range_end, range_step, phys_address, table_type):
+    '''
+    Dumping the entire page tables would be a more efficient approach
+    '''
     start = int(range_start,16)
     end = int(range_end,16)
     step = int(range_step,16)
@@ -171,7 +174,7 @@ def pgd_range_walk(range_start, range_end, range_step):
         pgd_walk(hex(i))
 
 def display_flags(entries):
-    print(f"{'Flag/Pagetable Entry':<30} |{'PGD':<15} |{'PUD':<15} |{'PMD':<15} |{'PT':<15}")
+    print(f"\n{'Flag/Pagetable Entry':<30} |{'PGD':<15} |{'PUD':<15} |{'PMD':<15} |{'PT':<15}")
     print("-" * 100)
     flags = ['Hex','Present', 'Huge', 'ReadWrite', 'UserSupervisor', 'PageWriteThrough', 'PageCacheDisabled', 'Accessed']
     

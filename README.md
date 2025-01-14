@@ -68,3 +68,5 @@ It is intended that object is an actual address! Keep in mind, the tool may give
 2. Build help message
 3. Make more functionality to analyze exploits like PTE spray and search for page table collisions.
 4. Add an option and fucntion to display access rights and page table flags layout
+5. add a heuristic size analysis
+6. if possible, add analyzer of allocator contents and pagetables structure
