@@ -58,7 +58,7 @@ pgw -r -b <start_address> -e <end_address> [-d <step_size>]
 To search for a physical address or a page table entry:
 
 ```
-pgw -r -b <start_address> -e <end_address> [-d <step_size>] -p <physical_address> [- <table_type>]
+pgw -r -b <start_address> -e <end_address> [-d <step_size>] -p <physical_address> [-t <table_type>]
 ```
 
 `-b`: Start of the address range (hexadecimal).
