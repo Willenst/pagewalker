@@ -8,7 +8,8 @@ dirname = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(1, dirname)
 
 from pagetable_entry import PGDe, PUDe, PMDe, PTe
-from utility import spinning_cursor, validate_address, validate_range
+from utility import spinning_cursor, validate_address, validate_range, normalize_address
+#normalize address should be used all along the code
 
 #should be integrated with pagetable_entry.py
 class Page:
@@ -141,9 +142,12 @@ def pgd_virt_search(range_begin, range_end, range_delta, phys_address, table_typ
     '''
     Dumping the entire page tables would be a more efficient approach
     '''
-    begin = int(range_begin,16)
-    end = int(range_end,16)
-    delta = int(range_delta,16)
+    print(range_begin, range_end, range_delta, phys_address, table_type)
+    begin = normalize_address(range_begin)[0]
+    end = normalize_address(range_end)[0]
+    delta = normalize_address(range_delta)[0]
+    phys_address, phys_offset = normalize_address(phys_address)
+    print(hex(begin),hex(end),hex(delta),hex(phys_address),hex(phys_offset),)
     fail_counter = 0
     cursor_progress = 0
     all_fields = ['phys', 'pt', 'pmd', 'pgd', 'pud']
@@ -166,10 +170,11 @@ def pgd_virt_search(range_begin, range_end, range_delta, phys_address, table_typ
         if table_type == 'any':
             for field in all_fields:
                 if getattr(page, field) is not None:
-                    if phys_address == hex(getattr(page, field)):
-                        print(f"\033[32m{hex(i)}\033[0m in \033[32m{field}\033[0m")
-        elif phys_address == hex(getattr(page, table_type)):
-            print(f"\033[32m{hex(i)}\033[0m")
+                    print(phys_address)
+                    if phys_address == getattr(page, field):
+                        print(f"\033[32m{hex(i+phys_offset)}\033[0m in \033[32m{field}\033[0m")
+        elif phys_address == getattr(page, table_type):
+            print(f"\033[32m{hex(i+phys_offset)}\033[0m")
 
 
 def pgd_range_walk(range_begin, range_end, range_delta):
