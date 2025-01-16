@@ -1,16 +1,33 @@
 # pagewalker
 
-A simple, semi-automated GDB module/plugin for 4-level page tables analyze.
+A simple, semi-automated GDB module/plugin for analyzing 4-level page tables.
+
+## Installation
+
+1. Place pagewalker.py and its dependencies in a directory of your choice.
+2. Import the tool in GDB runtime:: `source {your_path_to_tool}/pagewalker.py`
+Alternatively, add it to your .gdbinit file for automatic loading.
 
 ## Usage
 
-### Page walk
-
-1. Import the tool in gdb runtime: `source {your_path_to_tool}/pagewalker.py` (or simply add to .gdbinit)
-2. In GDB, call: `pgd_walk {virtual_address}`
+The tool provides multiple functionalities accessible via the pgw command. Use the -h flag to display help information:
 
 ```
-(remote) gef➤  pgd_walk 0xffffffff8315e000
+pgw -h
+```
+
+### Walk a Single Virtual Address
+
+To analyze the page table entries for a specific virtual address:
+
+```
+pgw -w <virtual_address>
+```
+
+Exmaple:
+
+```
+(remote) gef➤  pgw -w 0xffffffff8315e000
 
 0xfffffe0000000000  |PGD            |PUD            |PMD            |PT             |PHYS           
 -----------------------------------------------------------------------------------------------
@@ -19,54 +36,61 @@ index:              |508            |0              |0              |0          
 address:            |0x100fc0fe0    |0x23fff0000    |0x23ffef000    |0x23ffed000    |0x315d000 
 ```
 
-### Page walk for range of pages
+### Walk a Range of Virtual Addresses
 
-1st address - is the address of the beginning of the range
-2nd address - end address of the end of the range
-3rd address - step
+To analyze a range of virtual addresses:
 
 ```
-pgd_range_walk 0x10000000000 0x10062000000 0x200000
-
-0x10000000000       |PGD            |PUD            |PMD            |PT             |PHYS           
------------------------------------------------------------------------------------------------
-index:              |2              |0              |0              |0              |               
------------------------------------------------------------------------------------------------
-address:            |0x101fb2010    |0x14d1ef000    |0x14d1f0000    |0x14d1f1000    |0x14aa4f000    
-
-
-0x10000200000       |PGD            |PUD            |PMD            |PT             |PHYS           
------------------------------------------------------------------------------------------------
-index:              |2              |0              |1              |0              |               
------------------------------------------------------------------------------------------------
-address:            |0x101fb2010    |0x14d1ef000    |0x14d1f0008    |0x14d253000    |0x15175f000
+pgw -r -b <start_address> -e <end_address> [-d <step_size>]
 ```
 
-### Search virtual address for a physical page or page table entry
+`-b`: Start of the address range (hexadecimal).
+
+`-e`: End of the address range (hexadecimal).
+
+`-d`: Step size for the range (default: 0x1000).
+
+### Search for a Physical Address
 
 `(Currently slow and unstable)`
 `Can be used to search for any address entry in memory`
 
-1st param - address of the beginning of the search area
-2nd param - address of the end of the search area
-3rd param - step
-4th param - desired physical address 
-5th param - type of entry (phys, pt , pmd, pud, pgd), use all if you need to search address in any entry.
+To search for a physical address or a page table entry:
 
 ```
-(remote) gef➤  pgd_phys_search 0xfffffe0000000000 0xfffffe0000004000 0x1000 0x237c14000 phys
-0xfffffe0000002000
+pgw -r -b <start_address> -e <end_address> [-d <step_size>] -p <physical_address> [- <table_type>]
 ```
 
-## Note: 
+`-b`: Start of the address range (hexadecimal).
 
-It is intended that object is an actual address! Keep in mind, the tool may give errors now, especially if you use it in a way inconsistent with the README, as there are no safeguards against misuse! May not work for some addresses!
+`-e`: End of the address range (hexadecimal).
+
+`-d`: Step size for the range (default: 0x1000).
+
+`-p`: Desired physical address to search for (hexadecimal).
+
+`-t`: Type of entry to search (pgd, pud, pmd, pt, phys, any; default: any).
+
+### Display Page Table Flags
+To display the access rights and flags for a specific virtual address:
+
+```
+pgw -f <virtual_address>
+```
+
+## Notes
+
+Argument Validation: The tool should validete input arguments to ensure correctness. Any invalid inputs will prompt an error message.
+Sometimes validation may fail, please try not to break the programm, at least for now.
+
+Errors: The tool may produce errors if used with inconsistent or unsupported inputs. Always validate your addresses.
+
+Performance: Searching through large address ranges may take significant time.
+
+Stablility: Since there are no autotests yet, you are the autotest, write about any bugs you find.
 
 ## To be done:
 
-1. Completely redesign the work with plugin arguments, which would be convenient and understandable
-2. Build help message
+1. Make autotests
+2. Refactor code that has already become spaghetti
 3. Make more functionality to analyze exploits like PTE spray and search for page table collisions.
-4. Add an option and fucntion to display access rights and page table flags layout
-5. add a heuristic size analysis
-6. if possible, add analyzer of allocator contents and pagetables structure
