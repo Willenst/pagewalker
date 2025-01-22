@@ -142,12 +142,10 @@ def pgd_virt_search(range_begin, range_end, range_delta, phys_address, table_typ
     '''
     Dumping the entire page tables would be a more efficient approach
     '''
-    print(range_begin, range_end, range_delta, phys_address, table_type)
     begin = normalize_address(range_begin)[0]
     end = normalize_address(range_end)[0]
     delta = normalize_address(range_delta)[0]
     phys_address, phys_offset = normalize_address(phys_address)
-    print(hex(begin),hex(end),hex(delta),hex(phys_address),hex(phys_offset),)
     fail_counter = 0
     cursor_progress = 0
     all_fields = ['phys', 'pt', 'pmd', 'pgd', 'pud']
@@ -251,9 +249,7 @@ class PageTableCommands(gdb.Command):
             validate_address(args.flag_scan)
             page_scan(args.flag_scan)
         elif args.range:
-            print('a')
             validate_range(args.begin, args.end, args.delta)
-            print('a')
             pgd_range_walk(args.begin, args.end, args.delta)
         elif args.search:
             validate_range(args.begin, args.end, args.delta)
