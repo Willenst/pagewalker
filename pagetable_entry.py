@@ -11,6 +11,7 @@ class BASEe:
         self.PageWriteThrough = (self.value >> 3) & 1
         self.PageCacheDisabled = (self.value >> 4) & 1
         self.Accessed = (self.value >> 5) & 1
+        self.NX = (self.value >> 63) & 1
 
     def to_dict(self):
         return {k: v for k, v in self.__dict__.items() if not k.startswith('_')}

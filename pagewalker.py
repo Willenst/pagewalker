@@ -185,7 +185,7 @@ def pgd_range_walk(range_begin, range_end, range_delta):
 def display_flags(entries):
     print(f"\n{'Flag/Pagetable Entry':<30} |{'PGD':<15} |{'PUD':<15} |{'PMD':<15} |{'PT':<15}")
     print("-" * 100)
-    flags = ['Hex','Present', 'Huge', 'ReadWrite', 'UserSupervisor', 'PageWriteThrough', 'PageCacheDisabled', 'Accessed']
+    flags = ['Hex','Present', 'Huge', 'ReadWrite', 'UserSupervisor', 'PageWriteThrough', 'PageCacheDisabled', 'Accessed', 'NX']
     
     for flag in flags:
         row = f"{flag:<30} |"
