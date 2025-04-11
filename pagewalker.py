@@ -232,6 +232,11 @@ def parse_arguments():
 
     return parser
 
+def format_input(input):
+    result = []
+    for el in input:
+        result.append((gdb.execute(f"p/x {el}", to_string=True)).split('=')[1].strip())
+    return tuple(result)
 
 class PageTableCommands(gdb.Command):
     """GDB Command for managing page table operations."""
@@ -241,19 +246,23 @@ class PageTableCommands(gdb.Command):
     def invoke(self, arg, from_tty):
         parser = parse_arguments()
         args = parser.parse_args(arg.split())
-
+        #TODO: Add wrong args combinations
         if args.walk:
-            validate_address(args.walk)
-            pgd_walk(args.walk)
-        if args.flag_scan:
-            validate_address(args.flag_scan)
-            page_scan(args.flag_scan)
-        elif args.range:
-            validate_range(args.begin, args.end, args.delta)
-            pgd_range_walk(args.begin, args.end, args.delta)
-        elif args.search:
-            validate_range(args.begin, args.end, args.delta)
-            validate_address(args.phys)
-            pgd_virt_search(args.begin, args.end, args.delta, args.phys, args.table_type)
+            fortmated_walk = format_input([args.walk])
+            validate_address(*fortmated_walk)
+            pgd_walk(*fortmated_walk)
+        elif args.flag_scan:
+            fortmated_scan = format_input([args.flag_scan])
+            validate_address(*fortmated_scan)
+            page_scan(*fortmated_scan)
+        elif args.range or args.search:
+            fortmated_range = format_input([args.begin, args.end, args.delta])
+            validate_range(*fortmated_range)
+            if args.search:
+                fortmated_phys = format_input([args.phys])
+                validate_address(*fortmated_phys)
+                pgd_virt_search(*fortmated_range, *fortmated_phys, args.table_type)
+            else:
+                pgd_range_walk(*fortmated_range)
 
 PageTableCommands()
