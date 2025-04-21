@@ -197,7 +197,7 @@ def display_flags(entries):
         print(row)
         print("-" * 100)
 
-    
+
 def page_scan(addr):
     page = Page(addr)
     entries = [
