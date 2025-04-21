@@ -1,6 +1,7 @@
 import gdb
 import re
 
+VERBOSE = False # TODO: connect to argparse
 
 REGIONS = {
     "userspace":        [0x0000000000000000, 0x00007fffffffffff],
@@ -146,6 +147,72 @@ class MemoryMapper:
 def gen_virt(pgd, pud, pmd, pt):
     return (0xffff << 48) | (pgd << 39) | (pud << 30) | (pmd << 21) | (pt << 12)
 
+def nearby(prev, curr):
+    prev_virt, prev_phys, prev_idxs = prev
+    curr_virt, curr_phys, curr_idxs = curr
+
+    if prev_idxs[3] is not None:  # PTE level (4KB)
+        page_size = 0x1000
+    elif prev_idxs[2] is not None:  # PMD level (2MB)
+        page_size = 0x200000
+    else:  # PUD level (1GB)
+        page_size = 0x40000000
+ 
+    virt_ok = abs(curr_virt - prev_virt) == page_size
+    # TODO 
+    # 0xffffff1bffd83000                       [510|111|510|387]      phys=0x000100051000
+    # 0xffffff1bffd93000                       [510|111|510|403]      phys=0x000100051000
+    # 1 Mib step seems buggy
+
+    phys_ok = (abs(curr_phys - prev_phys) == page_size) or (curr_phys == prev_phys)
+
+    return phys_ok
+
+def group_entries_by_range(all_entries):
+    if not all_entries:
+        return []
+
+    grouped = []
+    current_group = [all_entries[0]]
+
+    for curr in all_entries[1:]:
+        prev = current_group[-1]
+        if nearby(prev, curr):
+            current_group.append(curr)
+        else:
+            grouped.append(current_group)
+            current_group = [curr]
+
+    if current_group:
+        grouped.append(current_group)
+
+    return grouped
+
+
+def format_index_range(start_idxs, end_idxs):
+    parts = []
+
+    for start, end in zip(start_idxs, end_idxs):
+        if start is None and end is None:
+            parts.append("---")
+        elif start == end:
+            parts.append(f"{start:03}")
+        elif start is None or end is None:
+            parts.append("???")
+        else:
+            parts.append(f"{start:03}-{end:03}")
+
+    return "|".join(parts)
+
+def format_single_index(idxs):
+    parts = []
+    for idx in idxs:
+        if idx is None:
+            parts.append("---")
+        else:
+            parts.append(f"{idx:03}")
+    return "|".join(parts)
+
 def dump_all(mapper, include_regions=None, exclude_regions=None):
     zones = list(REGIONS.keys())
     if not include_regions:
@@ -184,10 +251,31 @@ def dump_all(mapper, include_regions=None, exclude_regions=None):
 
     all_entries.sort(key=lambda x: x[0])
 
-    for virt, phys, idxs in all_entries:
-        idx_str = "|".join("---" if i is None else f"{i:03}" for i in idxs)
-        print(f"0x{virt:016x} [{idx_str}]  phys=0x{phys:x}")
+    if VERBOSE:
+        for virt, phys, idxs in all_entries:
+            idx_str = format_single_index(idxs)
+            print(f"0x{virt:016x}  [{idx_str}]  phys=0x{phys:012x}")
+    else:
+        for group in group_entries_by_range(all_entries):
+            start = group[0]
+            end = group[-1]
+            idx_str = format_index_range(start[2], end[2])
+
+            virt_start = f"0x{start[0]:016x}"
+            virt_end   = f"0x{end[0]:016x}"
+            phys_start = f"0x{start[1]:012x}"
+            phys_end   = f"0x{end[1]:012x}"
+
+            if len(group) == 1:
+                print(f"{virt_start}                       [{idx_str}]      phys={phys_start}")
+            else:
+                if start[1] > end[1]:
+                    print(f"{virt_start} - {virt_end}  [{idx_str}]  phys={phys_start} > {phys_end}")
+                elif start[1] < end[1]:
+                    print(f"{virt_start} - {virt_end}  [{idx_str}]  phys={phys_start} < {phys_end}")
+                else:
+                    print(f"{virt_start} - {virt_end}  [{idx_str}]  phys={phys_start}")
 
 cr3_val = int(gdb.execute("p/x $cr3 & ~0xfff", to_string=True).split('=')[1].strip(), 16)
 mapper = MemoryMapper(cr3_val)
-dump_all(mapper, exclude_regions=['userspace','page_offset_base','esp','efi'])
+dump_all(mapper)#, exclude_regions=['userspace','page_offset_base','esp','efi'])
