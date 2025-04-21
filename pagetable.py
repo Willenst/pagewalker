@@ -1,6 +1,19 @@
 import gdb
 import re
 
+
+REGIONS = {
+    "userspace":        [0x0000000000000000, 0x00007fffffffffff],
+    "page_offset_base": [0xffff888000000000, 0xffffc87fffffffff],
+    "vmalloc_ioremap":  [0xffffc90000000000, 0xffffe8ffffffffff],
+    "vmemmap_base":     [0xffffea0000000000, 0xffffeaffffffffff],
+    "cpu_entry_area":   [0xfffffe0000000000, 0xfffffe7fffffffff],
+    "esp":              [0xffffff0000000000, 0xffffff7fffffffff],
+    "efi":              [0xffffffef00000000, 0xfffffffeffffffff],
+    "kernel_text":      [0xffffffff80000000, 0xffffffff9fffffff],
+    "modules":          [0xffffffffa0000000, 0xfffffffffeffffff],
+}
+
 class MemoryPage:
     def __init__(self, phys_addr, size):
         self.phys_addr = phys_addr
@@ -127,17 +140,53 @@ class MemoryMapper:
         ]
 
         return idxs
-        
+
 def gen_virt(pgd, pud, pmd, pt):
     return (0xffff << 48) | (pgd << 39) | (pud << 30) | (pmd << 21) | (pt << 12)
 
-def dump_all_ptes_with_index(mapper):
-    for (pgd_idx, pud_idx, pmd_idx), pte in mapper.pte_tables.items():
-        for pt_idx, entry in enumerate(pte.entries):
+def dump_all(mapper, include_regions=None, exclude_regions=None):
+    zones = list(REGIONS.keys())
+    if not include_regions:
+        selected = list(REGIONS.values())
+    else:
+        selected = [REGIONS[name] for name in include_regions]
+
+    if exclude_regions:
+        selected = [REGIONS[name] for name in zones if name not in exclude_regions]
+    #print(selected)
+
+    def in_selected_regions(addr):
+        return any(start <= addr <= end for start, end in selected)
+
+    all_entries = []
+
+    for pgd_idx, pud in mapper.pud_tables.items():
+        for pud_idx, entry in enumerate(pud.entries):
             if isinstance(entry, MemoryPage):
-                virt = gen_virt(pgd_idx, pud_idx, pmd_idx, pt_idx)
-                print(f"0x{virt:016x} [{pgd_idx:03}|{pud_idx:03}|{pmd_idx:03}|{pt_idx:03}]  phys=0x{entry.phys_addr:x}")
+                virt = gen_virt(pgd_idx, pud_idx, 0, 0)
+                if in_selected_regions(virt):
+                    all_entries.append((virt, "1GB", entry.phys_addr, [pgd_idx, pud_idx, None, None]))
+
+    for (pgd_idx, pud_idx), pmd in mapper.pmd_tables.items():
+        for pmd_idx, entry in enumerate(pmd.entries):
+            if isinstance(entry, MemoryPage):
+                virt = gen_virt(pgd_idx, pud_idx, pmd_idx, 0)
+                if in_selected_regions(virt):
+                    all_entries.append((virt, "2MB", entry.phys_addr, [pgd_idx, pud_idx, pmd_idx, None]))
+
+    for (pgd_idx, pud_idx, pmd_idx), pte in mapper.pte_tables.items():
+        for pte_idx, entry in enumerate(pte.entries):
+            if isinstance(entry, MemoryPage):
+                virt = gen_virt(pgd_idx, pud_idx, pmd_idx, pte_idx)
+                if in_selected_regions(virt):
+                    all_entries.append((virt, "4KB", entry.phys_addr, [pgd_idx, pud_idx, pmd_idx, pte_idx]))
+
+    all_entries.sort(key=lambda x: x[0])
+
+    for virt, size, phys, idxs in all_entries:
+        idx_str = "|".join("---" if i is None else f"{i:03}" for i in idxs)
+        print(f"0x{virt:016x} [{idx_str}]  phys=0x{phys:x} size={size}")
 
 cr3_val = int(gdb.execute("p/x $cr3 & ~0xfff", to_string=True).split('=')[1].strip(), 16)
 mapper = MemoryMapper(cr3_val)
-dump_all_ptes_with_index(mapper)
+dump_all(mapper, exclude_regions=['userspace','page_offset_base','esp','efi'])
