@@ -2,6 +2,7 @@ import gdb
 import re
 
 VERBOSE = False # TODO: connect to argparse
+VERBOSE_TABLES = True  # TODO: connect to argparse, add functionality
 
 REGIONS = {
     "userspace":        [0x0000000000000000, 0x00007fffffffffff],
@@ -158,11 +159,11 @@ def nearby(prev, curr):
     else:  # PUD level (1GB)
         page_size = 0x40000000
  
-    virt_ok = abs(curr_virt - prev_virt) == page_size
+    #virt_ok = abs(curr_virt - prev_virt) == page_size
     # TODO 
     # 0xffffff1bffd83000                       [510|111|510|387]      phys=0x000100051000
     # 0xffffff1bffd93000                       [510|111|510|403]      phys=0x000100051000
-    # 1 Mib step seems buggy
+    # 1 Mib step seems buggy, prefer phys group for now
 
     phys_ok = (abs(curr_phys - prev_phys) == page_size) or (curr_phys == prev_phys)
 
@@ -190,6 +191,7 @@ def group_entries_by_range(all_entries):
 
 
 def format_index_range(start_idxs, end_idxs):
+    # TODO: Add option to print addreses
     parts = []
 
     for start, end in zip(start_idxs, end_idxs):
