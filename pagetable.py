@@ -4,6 +4,7 @@ import re
 
 REGIONS = {
     "userspace":        [0x0000000000000000, 0x00007fffffffffff],
+    "ldt_remap":        [0xffff880000000000, 0xffff887fffffffff],
     "page_offset_base": [0xffff888000000000, 0xffffc87fffffffff],
     "vmalloc_ioremap":  [0xffffc90000000000, 0xffffe8ffffffffff],
     "vmemmap_base":     [0xffffea0000000000, 0xffffeaffffffffff],
@@ -12,6 +13,7 @@ REGIONS = {
     "efi":              [0xffffffef00000000, 0xfffffffeffffffff],
     "kernel_text":      [0xffffffff80000000, 0xffffffff9fffffff],
     "modules":          [0xffffffffa0000000, 0xfffffffffeffffff],
+    "vsyscall":         [0xffffffffff600000, 0xffffffffff600fff],
 }
 
 class MemoryPage:
@@ -153,7 +155,6 @@ def dump_all(mapper, include_regions=None, exclude_regions=None):
 
     if exclude_regions:
         selected = [REGIONS[name] for name in zones if name not in exclude_regions]
-    #print(selected)
 
     def in_selected_regions(addr):
         return any(start <= addr <= end for start, end in selected)
@@ -165,27 +166,27 @@ def dump_all(mapper, include_regions=None, exclude_regions=None):
             if isinstance(entry, MemoryPage):
                 virt = gen_virt(pgd_idx, pud_idx, 0, 0)
                 if in_selected_regions(virt):
-                    all_entries.append((virt, "1GB", entry.phys_addr, [pgd_idx, pud_idx, None, None]))
+                    all_entries.append((virt, entry.phys_addr, [pgd_idx, pud_idx, None, None]))
 
     for (pgd_idx, pud_idx), pmd in mapper.pmd_tables.items():
         for pmd_idx, entry in enumerate(pmd.entries):
             if isinstance(entry, MemoryPage):
                 virt = gen_virt(pgd_idx, pud_idx, pmd_idx, 0)
                 if in_selected_regions(virt):
-                    all_entries.append((virt, "2MB", entry.phys_addr, [pgd_idx, pud_idx, pmd_idx, None]))
+                    all_entries.append((virt, entry.phys_addr, [pgd_idx, pud_idx, pmd_idx, None]))
 
     for (pgd_idx, pud_idx, pmd_idx), pte in mapper.pte_tables.items():
         for pte_idx, entry in enumerate(pte.entries):
             if isinstance(entry, MemoryPage):
                 virt = gen_virt(pgd_idx, pud_idx, pmd_idx, pte_idx)
                 if in_selected_regions(virt):
-                    all_entries.append((virt, "4KB", entry.phys_addr, [pgd_idx, pud_idx, pmd_idx, pte_idx]))
+                    all_entries.append((virt, entry.phys_addr, [pgd_idx, pud_idx, pmd_idx, pte_idx]))
 
     all_entries.sort(key=lambda x: x[0])
 
-    for virt, size, phys, idxs in all_entries:
+    for virt, phys, idxs in all_entries:
         idx_str = "|".join("---" if i is None else f"{i:03}" for i in idxs)
-        print(f"0x{virt:016x} [{idx_str}]  phys=0x{phys:x} size={size}")
+        print(f"0x{virt:016x} [{idx_str}]  phys=0x{phys:x}")
 
 cr3_val = int(gdb.execute("p/x $cr3 & ~0xfff", to_string=True).split('=')[1].strip(), 16)
 mapper = MemoryMapper(cr3_val)
