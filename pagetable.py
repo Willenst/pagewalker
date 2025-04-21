@@ -1,4 +1,5 @@
 import gdb
+import re
 
 class MemoryPage:
     def __init__(self, phys_addr, size):
@@ -64,11 +65,12 @@ class MemoryMapper:
         self._setup_PTE()
 
     def _setup_PUD(self):
+        addr = self.pgd.phys_addr
+        raw_entry = gdb.execute(f"monitor xp/512gx 0x{addr:x}", to_string=True)
+        hex_values = re.findall(r'0x[0-9a-fA-F]+', raw_entry)
         for pgd_idx in range(512):
-            addr = self.pgd.phys_addr + pgd_idx * 8
-            raw_entry = gdb.execute(f"monitor xp/gx 0x{addr:x}", to_string=True)
-            value = int(raw_entry.split(':')[1].strip(), 16)
-            if value & 1 == 0:
+            value = int(hex_values[pgd_idx], 16)
+            if value == 0:
                 continue
             pud = PUDTable(value & 0x000ffffffffff000)
             self.pgd.add_entry(pgd_idx, pud)
@@ -76,28 +78,33 @@ class MemoryMapper:
 
     def _setup_PMD(self):
         for pgd_idx, pud in self.pud_tables.items():
+            addr = pud.phys_addr
+            if addr == 0:
+                continue
+            raw_entry = gdb.execute(f"monitor xp/512gx 0x{addr:x}", to_string=True)
+            hex_values = re.findall(r'0x[0-9a-fA-F]+', raw_entry)
             for pud_idx in range(512):
-                addr = pud.phys_addr + pud_idx * 8
-                raw_entry = gdb.execute(f"monitor xp/gx 0x{addr:x}", to_string=True)
-                value = int(raw_entry.split(':')[1].strip(), 16)
-                if value & 1 == 0:
-                    continue
+                value = int(hex_values[pud_idx], 16)
                 pmd = PMDTable(value & 0x000ffffffffff000)
+                if value == 0:
+                    continue
                 pud.add_entry(pud_idx, pmd)
                 self.pmd_tables[(pgd_idx, pud_idx)] = pmd
 
     def _setup_PTE(self):
         for (pgd_idx, pud_idx), pmd in self.pmd_tables.items():
+            addr = pmd.phys_addr
+            if addr == 0:
+                continue
+            raw_entry = gdb.execute(f"monitor xp/512gx 0x{addr:x}", to_string=True)
+            hex_values = re.findall(r'0x[0-9a-fA-F]+', raw_entry)
             for pmd_idx in range(512):
-                addr = pmd.phys_addr + pmd_idx * 8
-                raw_entry = gdb.execute(f"monitor xp/gx 0x{addr:x}", to_string=True)
-                value = int(raw_entry.split(':')[1].strip(), 16)
-                if value & 1 == 0:
+                value = int(hex_values[pmd_idx], 16)
+                if value == 0:
                     continue
                 pte = PTETable(pmd.phys_addr)
                 page = MemoryPage(value & 0x000ffffffffff000, 4096)
                 pte.add_entry(pmd_idx, page)
-                pmd.add_entry(pmd_idx, pte)
                 self.pte_tables[(pgd_idx, pud_idx, pmd_idx)] = pte
 
     def translate(self, virt_addr):
