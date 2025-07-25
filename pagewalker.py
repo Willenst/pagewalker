@@ -112,9 +112,6 @@ def format_output(out):
         try:
             hexed = hex(addr)
             return_list.append(hexed)
-            if int(hexed,16) < 0x1000000: #kernel base offset for sanity 
-                return_list = ['N/A' for i in range(len(out)+1)]
-                return return_list
         except:
             return_list.append('N/A')
     return return_list
